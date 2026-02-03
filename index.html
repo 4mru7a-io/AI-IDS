@@ -1,0 +1,183 @@
+<!-- <!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI IDS Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; }
+    h1 { color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+    th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+    tr.attack { background: #ffe6e6; }
+    .badge { padding: 4px 8px; border-radius: 6px; font-weight: bold; }
+    .normal { background: #e6fff2; color: #066; }
+    .attack { background: #ffdede; color: #900; }
+    #simulate { margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <h1>AI-Based IDS - Dashboard</h1>
+  <p>Recent detections (shows last 20). Use the /api/predict endpoint to post detections.</p>
+
+  <button id="simulate">Simulate Random Detection</button>
+
+  <table id="alerts">
+    <thead>
+      <tr><th>Time</th><th>Source</th><th>Destination</th><th>Label</th><th>Details</th></tr>
+    </thead>
+    <tbody>
+      {% for a in alerts %}
+      <tr class="{{ 'attack' if a.label=='Attack' else '' }}">
+        <td>{{ a.time }}</td>
+        <td>{{ a.src_ip }}</td>
+        <td>{{ a.dst_ip }}</td>
+        <td><span class="badge {{ 'attack' if a.label=='Attack' else 'normal' }}">{{ a.label }}</span></td>
+        <td>{{ a.details }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+<script>
+document.getElementById("simulate").addEventListener("click", async function(){
+  const resp = await fetch("/api/predict", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      src_ip: "10.0.0."+Math.floor(Math.random()*255),
+      dst_ip: "192.168.1."+Math.floor(Math.random()*255),
+      features: {},
+      meta: "Simulated event"
+    })
+  });
+  const result = await resp.json();
+  if(result && result.alert){
+    location.reload();
+  } else {
+    alert("Simulation failed");
+  }
+});
+</script>
+
+</body>
+</html> -->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI IDS Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; }
+    h1 { color: #333; margin-bottom: 6px; }
+    p.sub { color: #666; margin-top: 0; }
+    .controls { margin-top: 12px; }
+    button { padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 6px; overflow: hidden; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid #eee; text-align: left; font-size: 14px; }
+    thead th { background: #fafafa; color: #444; font-weight: 600; }
+    tbody tr:hover { background: #fafafa; }
+
+    /* Badge styles */
+    .badge { display:inline-block; padding:6px 10px; border-radius:999px; font-weight:700; font-size:13px; }
+    .badge.normal { background:#e6fff2; color:#06734a; }
+    .badge.dos { background:#ffe6e6; color:#8b0000; }
+    .badge.probe { background:#fff4e6; color:#8a4f00; }
+    .badge.r2l { background:#fff0f7; color:#6d0b4b; }
+    .badge.u2r { background:#f0f5ff; color:#0b3a8a; }
+    .badge.unknown { background:#f2f2f2; color:#333; }
+
+    /* Row highlight for attacks */
+    tr.attack { background:#fff7f7; }
+
+    .small { font-size:12px; color:#666; }
+
+    .footer { margin-top:16px; color:#555; font-size:13px; }
+  </style>
+</head>
+<body>
+  <h1>AI-Based IDS — Dashboard</h1>
+  <p class="sub">Recent detections (last 20). The <strong>Category</strong> column shows detected attack family: DoS, Probe, R2L, U2R, or Normal.</p>
+
+  <div class="controls">
+    <button id="simulate">Simulate Random Detection</button>
+  </div>
+
+  <table id="alerts">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Source</th>
+        <th>Destination</th>
+        <th>Category</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in alerts %}
+      {# Determine whether this is an attack row (not Normal Traffic) #}
+      {% set is_attack = (a.category != 'Normal Traffic') and (a.category != 'Normal') %}
+      <tr class="{{ 'attack' if is_attack else '' }}">
+        <td>{{ a.time }}</td>
+        <td>{{ a.src_ip }}</td>
+        <td>{{ a.dst_ip }}</td>
+        <td>
+          {% set cat = a.category %}
+          {% if 'DoS' in cat %}
+            <span class="badge dos">🚨 DoS</span>
+          {% elif 'Probe' in cat %}
+            <span class="badge probe">🔎 Probe</span>
+          {% elif 'R2L' in cat or 'Remote to Local' in cat %}
+            <span class="badge r2l">🔐 R2L</span>
+          {% elif 'U2R' in cat or 'User to Root' in cat %}
+            <span class="badge u2r">⚠️ U2R</span>
+          {% elif 'Normal' in cat %}
+            <span class="badge normal">✅ Normal</span>
+          {% else %}
+            <span class="badge unknown">❓ {{ cat }}</span>
+          {% endif %}
+          <div class="small">{{ cat }}</div>
+        </td>
+        <td>{{ a.details }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5" class="small">No alerts yet. Click "Simulate Random Detection" to generate sample alerts.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Tip: Use the API endpoint <code>/api/predict</code> to POST JSON and add real alerts programmatically.
+  </div>
+
+<script>
+document.getElementById("simulate").addEventListener("click", async function(){
+  const resp = await fetch("/api/predict", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      src_ip: "10.0.0."+Math.floor(Math.random()*255),
+      dst_ip: "192.168.1."+Math.floor(Math.random()*255),
+      features: {},      // empty features -> demo random if no model
+      meta: "Simulated event from UI"
+    })
+  });
+  const result = await resp.json();
+  if(result && result.alert){
+    // reload to display the new alert
+    location.reload();
+  } else if(result && result.category) {
+    location.reload();
+  } else {
+    alert("Simulation failed: " + JSON.stringify(result));
+  }
+});
+</script>
+
+</body>
+</html>
